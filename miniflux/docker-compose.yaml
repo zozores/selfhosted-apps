@@ -2,7 +2,7 @@ services:
   miniflux-app:
     image: 'miniflux/miniflux:latest'
     depends_on:
-      db:
+      miniflux-db:
         condition: service_healthy
     environment:
       - DATABASE_URL=${MINIFLUX_DATABASE_URL}
