@@ -1,0 +1,10 @@
+services:
+  memos:
+    image: neosmemo/memos:stable
+    container_name: memos
+    volumes:
+      - memos:/var/opt/memos
+
+volumes:
+  memos:
+    name: memos
