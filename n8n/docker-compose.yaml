@@ -5,11 +5,11 @@ services:
     ports:
       - "5678:5678"
     environment:
-      - N8N_HOST=${N8N_SUBDOMAIN}.${N8N_DOMAIN}
+      - N8N_HOST=${N8N_HOST}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
       - NODE_ENV=production
-      - WEBHOOK_URL=https://${N8N_SUBDOMAIN}.${N8N_DOMAIN}/
+      - WEBHOOK_URL=https://${N8N_HOST}/
       - GENERIC_TIMEZONE=${N8N_TIMEZONE}
     volumes:
       - n8n_data:/home/node/.n8n
