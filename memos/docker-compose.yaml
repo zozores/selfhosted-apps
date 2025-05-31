@@ -4,6 +4,8 @@ services:
     container_name: memos
     volumes:
       - memos:/var/opt/memos
+    ports:
+      - 5230
 
 volumes:
   memos:
