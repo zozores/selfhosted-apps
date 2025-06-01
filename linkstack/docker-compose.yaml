@@ -5,7 +5,6 @@ services:
     environment:
       TZ: 'America/Sao_Paulo'
       SERVER_ADMIN: 'admin@tao.tec.br'
-      HTTP_SERVER_NAME: 'bio.tao.tec.br'
       HTTPS_SERVER_NAME: 'bio.tao.tec.br'
       LOG_LEVEL: 'info'
       PHP_MEMORY_LIMIT: '256M'
