@@ -6,6 +6,7 @@ services:
       GTS_HOST: social.tao.tec.br
       GTS_DB_TYPE: sqlite
       GTS_DB_ADDRESS: /gotosocial/storage/sqlite.db
+      GTS_TRUSTED_PROXIES: "10.0.7.2/32"
       TZ: America/Sao_Paulo
     ports:
       - 8080
