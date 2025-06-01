@@ -1,0 +1,17 @@
+services:
+  gotosocial:
+    image: docker.io/superseriousbusiness/gotosocial:latest
+    user: 1000:1000
+    environment:
+      GTS_HOST: social.tao.tec.br
+      GTS_DB_TYPE: sqlite
+      GTS_DB_ADDRESS: /gotosocial/storage/sqlite.db
+      TZ: America/Sao_Paulo
+    ports:
+      - 8080
+    volumes:
+      - gotosocial_data:/gotosocial/storage
+    restart: "always"
+
+volumes:
+  gotosocial_data: {}
