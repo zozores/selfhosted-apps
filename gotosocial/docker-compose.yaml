@@ -3,10 +3,10 @@ services:
     image: docker.io/superseriousbusiness/gotosocial:latest
     user: 1000:1000
     environment:
-      GTS_HOST: social.tao.tec.br
+      GTS_HOST: social.zozo.pro.br
       GTS_DB_TYPE: sqlite
       GTS_DB_ADDRESS: /gotosocial/storage/sqlite.db
-      GTS_TRUSTED_PROXIES: "10.0.7.2/32"
+      GTS_TRUSTED_PROXIES: "10.0.3.2/32"
       TZ: America/Sao_Paulo
     ports:
       - 8080
