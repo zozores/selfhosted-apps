@@ -10,6 +10,8 @@ services:
       # IMPORTANT: Replace this with your own secure secret key!
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       DATABASE_URL: postgresql://blinko:${POSTGRES_PASSWORD}@postgres:5432/blinko
+    ports:
+      - "3000:1111"
     depends_on:
       postgres:
         condition: service_healthy
