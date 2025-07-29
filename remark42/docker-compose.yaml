@@ -9,7 +9,5 @@ services:
       - AUTH_ANON=true
       - AUTH_GITHUB_CID=${AUTH_GITHUB_CID}
       - AUTH_GITHUB_CSEC=${AUTH_GITHUB_CSEC}
-    ports:
-      - "8080:8080"
     volumes:
       - remark-data:/srv/var
