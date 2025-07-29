@@ -1,0 +1,11 @@
+services:
+  remark42:
+    image: ghcr.io/umputun/remark42:latest
+    restart: always
+    environment:
+      - REMARK_URL=${REMARK_URL}
+      - SITE=${SITE_ID}
+      - SECRET=${SECRET}
+      - AUTH_ANON=true
+    volumes:
+      - remark-data:/srv/var
