@@ -7,5 +7,7 @@ services:
       - SITE=${SITE_ID}
       - SECRET=${SECRET}
       - AUTH_ANON=true
+      - AUTH_GITHUB_CID=${AUTH_GITHUB_CID}
+      - AUTH_GITHUB_CSEC=${AUTH_GITHUB_CSEC}
     volumes:
       - remark-data:/srv/var
