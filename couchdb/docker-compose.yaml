@@ -1,0 +1,10 @@
+services:
+  couchdb:
+    image: couchdb:latest
+    user: 1000:1000
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+    restart: unless-stopped
