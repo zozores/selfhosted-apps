@@ -7,4 +7,6 @@ services:
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     volumes:
       - couchdb-data:/opt/couchdb/data
+    ports:
+      - 5984:5984
     restart: unless-stopped
