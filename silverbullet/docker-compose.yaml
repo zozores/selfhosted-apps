@@ -4,6 +4,7 @@ services:
     restart: unless-stopped
     environment:
       - SB_USER=${SB_USER}
+      - SB_INDEX_PAGE=Home
     volumes:
       - sb-data:/space
     ports:
