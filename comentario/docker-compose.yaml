@@ -17,5 +17,5 @@ services:
     depends_on:
       - db
     environment:
-      BASE_URL: https://comments.zozo.pro.br
+      BASE_URL: https://comentario.zozo.pro.br
     restart: unless-stopped
