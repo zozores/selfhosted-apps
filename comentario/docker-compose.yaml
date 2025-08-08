@@ -12,8 +12,6 @@ services:
   app:
     container_name: comentario-app
     image: registry.gitlab.com/comentario/comentario
-    ports:
-      - 8080:80
     depends_on:
       - db
     environment:
