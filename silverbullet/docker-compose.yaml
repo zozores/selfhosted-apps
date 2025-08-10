@@ -5,6 +5,7 @@ services:
     environment:
       - SB_USER=${SB_USER}
       - SB_INDEX_PAGE=Home
+      - SB_AUTH_TOKEN=${SB_AUTH_TOKEN}
     volumes:
       - sb-data:/space
     ports:
