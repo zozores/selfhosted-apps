@@ -1,5 +1,5 @@
 services:
-  teable:
+  tududi:
     image: chrisvel/tududi:latest
     restart: always
     ports:
