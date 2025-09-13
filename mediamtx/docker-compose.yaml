@@ -1,0 +1,7 @@
+services:
+    mediamtx:
+        network_mode: host
+        environment:
+            - MTX_RTSPTRANSPORTS=tcp
+            - MTX_WEBRTCADDITIONALHOSTS=192.168.0.137
+        image: bluenviron/mediamtx
