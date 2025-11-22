@@ -7,7 +7,7 @@ services:
       - SB_INDEX_PAGE=Home
       - SB_AUTH_TOKEN=${SB_AUTH_TOKEN}
     volumes:
-      - sb-data:/space
+      - sb_data:/space
     ports:
       - 3000:3000
   # To enable auto upgrades, run watchtower
