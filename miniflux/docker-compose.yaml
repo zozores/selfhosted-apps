@@ -4,8 +4,7 @@ services:
     ports:
       - "8180:8080"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       - DATABASE_URL=postgres://miniflux:${MINIFLUX_DB_PASSWORD}@db/miniflux?sslmode=disable
       - RUN_MIGRATIONS=1
@@ -23,9 +22,9 @@ services:
       - POSTGRES_DB=miniflux
     volumes:
       - miniflux-db:/var/lib/postgresql
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "miniflux" ]
-      interval: 10s
-      start_period: 30s
+    # healthcheck:
+    #   test: [ "CMD", "pg_isready", "-U", "miniflux" ]
+    #   interval: 10s
+    #   start_period: 30s
 volumes:
   miniflux-db:
