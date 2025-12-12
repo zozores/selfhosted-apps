@@ -2,8 +2,6 @@ services:
   miniflux:
     image: miniflux/miniflux:latest
     container_name: miniflux-app
-    networks:
-      - miniflux-net
     ports:
       - "8180:8080"
     depends_on:
@@ -25,8 +23,6 @@ services:
       - POSTGRES_USER=miniflux
       - POSTGRES_PASSWORD=${MINIFLUX_DB_PASSWORD}
       - POSTGRES_DB=miniflux
-    networks:
-      - miniflux-net
     volumes:
       - miniflux-db:/var/lib/postgresql
     # healthcheck:
@@ -35,5 +31,3 @@ services:
     #   start_period: 30s
 volumes:
   miniflux-db:
-networks:
-  miniflux-net:
