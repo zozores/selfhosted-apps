@@ -1,12 +1,13 @@
 services:
   miniflux:
     image: miniflux/miniflux:latest
+    container_name: miniflux-app
     ports:
       - "8180:8080"
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgres://miniflux:{{MINIFLUX_DB_PASSWORD}}@db/miniflux?sslmode=disable
+      - DATABASE_URL=postgres://miniflux:{{MINIFLUX_DB_PASSWORD}}@miniflux-db/miniflux?sslmode=disable
       - RUN_MIGRATIONS=1
       - CREATE_ADMIN=1
       - ADMIN_USERNAME={{MINIFLUX_ADMIN_USERNAME}}
@@ -16,6 +17,7 @@ services:
       - CLEANUP_REMOVE_SESSIONS_DAYS=7
   db:
     image: postgres:17-alpine
+    container_name: miniflux-db
     environment:
       - POSTGRES_USER=miniflux
       - POSTGRES_PASSWORD={{MINIFLUX_DB_PASSWORD}}
