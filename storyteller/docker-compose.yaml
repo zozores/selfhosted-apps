@@ -1,0 +1,10 @@
+services:
+  web:
+    image: registry.gitlab.com/storyteller-platform/storyteller:latest
+    volumes:
+      - st-data:/data:rw
+    environment:
+      - STORYTELLER_SECRET_KEY=${STORYTELLER_SECRET_KEY}
+      - ENABLE_WEB_READER=true
+    ports:
+      - "8001:8001"
