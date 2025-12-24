@@ -2,9 +2,9 @@ services:
   kavita:
     image: jvmilazz0/kavita:latest
     volumes:
-      - kavita-manga:/manga
-      - kavita-comics:/comics
-      - kavita-books:/books
+      - /run/media/zozores/Elements/pub/biblio/manga:/manga
+      - /run/media/zozores/Elements/pub/biblio/comics:/comics
+      - /run/media/zozores/Elements/pub/biblio/books:/books
       - kavita-config:/kavita/config
     environment:
       - TZ=America/Sao_Paulo
