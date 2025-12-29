@@ -1,0 +1,9 @@
+services:
+
+  isso:
+    image: "ghcr.io/isso-comments/isso:latest"
+    volumes:
+      - ./isso.cfg:/config/isso.cfg
+      - isso-db:/db
+    ports:
+      - "8180:8080"
