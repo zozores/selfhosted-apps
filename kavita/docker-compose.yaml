@@ -2,9 +2,9 @@ services:
   kavita:
     image: jvmilazz0/kavita:latest
     volumes:
-      - /run/media/zozores/Elements/pub/biblio/manga:/manga
-      - /run/media/zozores/Elements/pub/biblio/comics:/comics
-      - /run/media/zozores/Elements/pub/biblio/books:/books
+      - /mnt/elements/pub/biblio/manga:/manga
+      - /mnt/elements/pub/biblio/comics:/comics
+      - /mnt/elements/pub/biblio/books:/books
       - kavita-config:/kavita/config
     environment:
       - PUID=1000
