@@ -1,0 +1,57 @@
+services:
+  db:
+    container_name: db
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pinepods
+      POSTGRES_USER: pinepods
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pinepods-pgdata:/var/lib/postgresql/data
+    restart: always
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: always
+
+  pinepods:
+    image: madeofpendletonwool/pinepods:latest
+    ports:
+      - "8040:8040"
+    environment:
+      # Basic Server Info
+      SEARCH_API_URL: 'https://search.pinepods.online/api/search'
+      PEOPLE_API_URL: 'https://people.pinepods.online'
+      HOSTNAME: ${HOSTNAME}
+      # Database Vars
+      DB_TYPE: postgresql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: pinepods
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: pinepods
+      # Valkey Settings
+      VALKEY_HOST: valkey
+      VALKEY_PORT: 6379
+      # Enable or Disable Debug Mode for additional Printing
+      DEBUG_MODE: false
+      PUID: ${UID:-911}
+      PGID: ${GID:-911}
+      # Add timezone configuration
+      TZ: "America/Sao_Paulo"
+    volumes:
+      # Mount the download and backup locations on the server
+      - pinepods-downloads:/opt/pinepods/downloads
+      - pinepods-backups:/opt/pinepods/backups
+      # Timezone volumes, HIGHLY optional. Read the timezone notes below
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    restart: always
+    depends_on:
+      - db
+      - valkey
+volumes:
+  pinepods-pgdata:
+  pinepods-downloads:
+  pinepods-backups:
