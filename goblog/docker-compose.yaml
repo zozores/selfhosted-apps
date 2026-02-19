@@ -1,0 +1,19 @@
+services:
+  goblog:
+    image: ghcr.io/zozores/goblog:tools
+    container_name: goblog
+    ports:
+      - "8080:8080"
+    volumes:
+      - goblog-data:/app/data
+    configs:
+      - source: goblog-config
+        target: /app/config/config.yml
+    restart: unless-stopped
+
+volumes:
+  goblog-data: {}
+
+configs:
+  goblog-config:
+    external: true
