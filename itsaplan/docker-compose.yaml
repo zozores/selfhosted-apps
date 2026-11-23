@@ -1,0 +1,218 @@
+# ─────────────────────────────────────────────────────────────
+# Dokploy stack on the published GHCR images: postgres + rustfs + api + worker + bot + web.
+# Converted from docker-compose.coolify-images.yml for Dokploy (Docker Compose).
+#
+# Dokploy setup:
+#   1. Enable "Isolated Deployments" (Advanced -> Utilities -> Isolated Deployments)
+#      so Dokploy creates an isolated network and avoids DNS collisions with generic
+#      service names (postgres, minio, api, worker, bot, web).
+#   2. Add two domains in Dokploy's "Domains" tab:
+#      - Service: web | Container Port: 3001  (matches APP_URL)
+#      - Service: api | Container Port: 3000  (matches API_URL)
+#   3. Configure the required variables below in Dokploy's "Environment" tab.
+#      Generate URL-safe secrets with: openssl rand -hex 32
+#
+# Required environment variables:
+#   POSTGRES_PASSWORD      URL-safe DB password (use hex, e.g. openssl rand -hex 32)
+#   S3_ACCESS_KEY_ID       RustFS root access key (e.g. itsaplan or openssl rand -hex 16)
+#   S3_SECRET_ACCESS_KEY   RustFS root secret key (>= 8 chars, e.g. openssl rand -hex 32)
+#   BETTER_AUTH_SECRET     Auth session secret (openssl rand -hex 32)
+#   APP_ENCRYPTION_KEY     AES-256-GCM key for stored provider credentials (never rotate after storing data)
+#   API_URL                Public API origin, e.g. https://api.itsaplan.example.com
+#   APP_URL                Public Web origin, e.g. https://itsaplan.example.com
+#
+# Optional environment variables:
+#   VERSION, POSTGRES_USER, POSTGRES_DB, S3_BUCKET, S3_REGION, S3_FORCE_PATH_STYLE,
+#   BACKUP_RETENTION_DAYS, SKIP_PRE_MIGRATION_BACKUP, COOKIE_DOMAIN, CLIENT_IP_HEADER,
+#   TRUSTED_PROXIES, GIT_WEBHOOK_BASE_URL, SSRF_ALLOWED_HOSTS,
+#   WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_SUBJECT,
+#   TELEMETRY_DISABLED, DO_NOT_TRACK, TELEMETRY_DEBUG, PRIVACY_URL, TERMS_URL
+# ─────────────────────────────────────────────────────────────
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-itsaplan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Dokploy Environment}
+      POSTGRES_DB: ${POSTGRES_DB:-itsaplan}
+    volumes:
+      - /data/taotec/itsaplan/db:/var/lib/postgresql/data
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-itsaplan} -d ${POSTGRES_DB:-itsaplan}' ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # S3-compatible object store for issue attachments (RustFS).
+  # Both the S3 API (:9000) and the console (:9001) are internal only — the api
+  # streams attachment bytes over the internal network, so no port is published.
+  minio:
+    image: rustfs/rustfs:1.0.0
+    restart: unless-stopped
+    user: '0:0'
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in Dokploy Environment}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in Dokploy Environment}
+    volumes:
+      - /data/taotec/itsaplan/minio:/data
+    healthcheck:
+      test: [ 'CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:9000/health' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # One-shot: creates the attachments bucket, then exits. A PUT on a bucket that
+  # already exists succeeds, so it runs on every start.
+  minio-init:
+    image: rustfs/rustfs:1.0.0
+    restart: 'no'
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in Dokploy Environment}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in Dokploy Environment}
+      S3_BUCKET: ${S3_BUCKET:-planner-attachments}
+    entrypoint: >
+      /bin/sh -c " curl -fsS -X PUT --aws-sigv4 aws:amz:us-east-1:s3 --user \"$$S3_ACCESS_KEY_ID:$$S3_SECRET_ACCESS_KEY\" http://minio:9000/\"$$S3_BUCKET\" && echo 'bucket ready: '\"$$S3_BUCKET\" "
+
+  # One-shot: dumps the database and applies the migrations, then exits. api, worker
+  # and bot start only after it succeeds, so none of them runs against an old schema.
+  migrate:
+    image: ghcr.io/croffasia/itsaplan-api:${VERSION:-latest}
+    restart: 'no'
+    command: [ 'bun', 'run', 'packages/db/src/migrate.ts' ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-itsaplan}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-itsaplan}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-}
+      SKIP_PRE_MIGRATION_BACKUP: ${SKIP_PRE_MIGRATION_BACKUP:-}
+    volumes:
+      - /data/taotec/itsaplan/backups:/backups
+
+  api:
+    image: ghcr.io/croffasia/itsaplan-api:${VERSION:-latest}
+    restart: unless-stopped
+    # The image's own CMD migrates first; here the migrate service has done that.
+    command: [ 'bun', 'run', 'apps/api/src/index.ts' ]
+    expose:
+      - '3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-itsaplan}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-itsaplan}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in Dokploy Environment}
+      # Encrypts stored AI provider API keys at rest (AES-256-GCM). Changing it makes
+      # existing stored credentials undecryptable.
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in Dokploy Environment}
+      # API_URL is the api origin; APP_URL is the web origin.
+      API_URL: ${API_URL:?public origin of the api, e.g. https://api.example.com}
+      APP_URL: ${APP_URL:?public origin of the web app, e.g. https://app.example.com}
+      # Set COOKIE_DOMAIN only to override the parent domain derived from
+      # APP_URL (multi-label TLDs, deep subdomains).
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      # Where the client IP for the rate limit is read; empty reads X-Forwarded-For.
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      # Public origin for incoming Git webhooks when API_URL is private; empty uses API_URL.
+      GIT_WEBHOOK_BASE_URL: ${GIT_WEBHOOK_BASE_URL:-}
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-planner-attachments}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
+      # Hosts trusted even though they resolve privately. Also governs webhook URL
+      # validation and attachment import.
+      SSRF_ALLOWED_HOSTS: ${SSRF_ALLOWED_HOSTS:-}
+      # Web Push. Push is off while any of the three is empty; `bun run web-push:keys`
+      # prints a key pair. The worker needs the same values.
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT:-}
+    healthcheck:
+      test: [ 'CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3000/' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Background worker: webhook and notification delivery, source imports, and agent
+  # schedules. Shares the database with the api. No public ports.
+  worker:
+    image: ghcr.io/croffasia/itsaplan-worker:${VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-itsaplan}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-itsaplan}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in Dokploy Environment}
+      TELEMETRY_DISABLED: ${TELEMETRY_DISABLED:-}
+      DO_NOT_TRACK: ${DO_NOT_TRACK:-}
+      TELEMETRY_DEBUG: ${TELEMETRY_DEBUG:-}
+      SSRF_ALLOWED_HOSTS: ${SSRF_ALLOWED_HOSTS:-}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT:-}
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-planner-attachments}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
+
+  # Telegram bot: long polling for the instance bot, completing account links.
+  # Must stay at one replica. Bot token is stored in the database and edited in god mode.
+  bot:
+    image: ghcr.io/croffasia/itsaplan-bot:${VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-itsaplan}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-itsaplan}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in Dokploy Environment}
+
+  web:
+    image: ghcr.io/croffasia/itsaplan-web:${VERSION:-latest}
+    restart: unless-stopped
+    expose:
+      - '3001'
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+      # Public api origin the browser uses.
+      API_URL: ${API_URL:?public origin of the api, e.g. https://api.example.com}
+      # Internal api origin used by web to stream avatars and attachments (/media).
+      SERVICE_URL_API: http://api:3000
+      # Legal document URLs shown on the logged-out screens; empty hides the notice.
+      PRIVACY_URL: ${PRIVACY_URL:-}
+      TERMS_URL: ${TERMS_URL:-}
+    # /login renders without a session, and without reaching the api.
+    healthcheck:
+      test: [ 'CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3001/login' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
