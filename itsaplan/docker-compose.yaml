@@ -99,8 +99,6 @@ services:
     restart: unless-stopped
     # The image's own CMD migrates first; here the migrate service has done that.
     command: [ 'bun', 'run', 'apps/api/src/index.ts' ]
-    expose:
-      - '3000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -198,8 +196,6 @@ services:
   web:
     image: ghcr.io/croffasia/itsaplan-web:${VERSION:-latest}
     restart: unless-stopped
-    expose:
-      - '3001'
     depends_on:
       - api
     environment:
