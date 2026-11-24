@@ -147,7 +147,7 @@ services:
       start_period: 30s
     labels:
       dockroute.enabled: "true"
-      dockroute.hostname: "api-plan.tao.tec.br"
+      dockroute.hostname: "api.plan.tao.tec.br"
       dockroute.target: "100.65.191.34"
 
   # Background worker: webhook and notification delivery, source imports, and agent
