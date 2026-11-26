@@ -95,7 +95,7 @@ services:
       - /data/taotec/itsaplan/backups:/backups
 
   api:
-    image: ghcr.io/croffasia/itsaplan-api:${VERSION:-latest}
+    image: ghcr.io/croffasia/itsaplan-api:latest
     restart: unless-stopped
     # The image's own CMD migrates first; here the migrate service has done that.
     command: [ 'bun', 'run', 'apps/api/src/index.ts' ]
@@ -153,7 +153,7 @@ services:
   # Background worker: webhook and notification delivery, source imports, and agent
   # schedules. Shares the database with the api. No public ports.
   worker:
-    image: ghcr.io/croffasia/itsaplan-worker:${VERSION:-latest}
+    image: ghcr.io/croffasia/itsaplan-worker:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -181,7 +181,7 @@ services:
   # Telegram bot: long polling for the instance bot, completing account links.
   # Must stay at one replica. Bot token is stored in the database and edited in god mode.
   bot:
-    image: ghcr.io/croffasia/itsaplan-bot:${VERSION:-latest}
+    image: ghcr.io/croffasia/itsaplan-bot:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -194,7 +194,7 @@ services:
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in Dokploy Environment}
 
   web:
-    image: ghcr.io/croffasia/itsaplan-web:${VERSION:-latest}
+    image: ghcr.io/croffasia/itsaplan-web:latest
     restart: unless-stopped
     depends_on:
       - api
